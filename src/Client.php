@@ -111,6 +111,11 @@ class Client
     protected $config;
 
     /**
+     * @var string
+     */
+    public $lastValidationError = '';
+
+    /**
      * Client constructor.
      *
      * @param array $config
@@ -302,6 +307,12 @@ class Client
             }
             $maxAttempts--;
         } while ($maxAttempts > 0 && $data['status'] != 'valid');
+
+        $success = (isset($data['status']) && $data['status'] == 'valid');
+
+        if (!$success && isset($data['challenges']) && isset($data['challenges'][0]) && isset($data['challenges'][0]['error']) && isset($data['challenges'][0]['error']['detail'])) {
+            $this->lastValidationError = $data['challenges'][0]['error']['detail'];
+        }
 
         return (isset($data['status']) && $data['status'] == 'valid');
     }
