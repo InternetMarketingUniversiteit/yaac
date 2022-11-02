@@ -26,6 +26,11 @@ class Client
     const DIRECTORY_STAGING = 'https://acme-staging-v02.api.letsencrypt.org/directory';
 
     /**
+     * Dev url
+     */
+    const DIRECTORY_DEV = 'https://pebble:14000/dir';
+
+    /**
      * Flag for production
      */
     const MODE_LIVE = 'live';
@@ -34,6 +39,11 @@ class Client
      * Flag for staging
      */
     const MODE_STAGING = 'staging';
+
+    /**
+     * Flag for dev
+     */
+    const MODE_DEV = 'dev';
 
     /**
      * New account directory
@@ -368,8 +378,14 @@ class Client
 
         $data = json_decode((string)$response->getBody(), true);
         $accountURL = $response->getHeaderLine('Location');
-        $date = (new \DateTime())->setTimestamp(strtotime($data['createdAt']));
-        return new Account($data['contact'], $date, ($data['status'] == 'valid'), $data['initialIp'], $accountURL);
+        if ($this->getOption('mode', self::MODE_DEV) == self::MODE_DEV) {
+            $data['createdAt'] = (new \DateTime());
+            $data['initialIp'] = shell_exec('hostname -I');
+            return new Account($data['contact'], $data['createdAt'], ($data['status'] == 'valid'), $data['initialIp'], $accountURL);
+        } else {
+            $date = (new \DateTime())->setTimestamp(strtotime($data['createdAt']));
+            return new Account($data['contact'], $date, ($data['status'] == 'valid'), $data['initialIp'], $accountURL);
+        }
     }
 
     /**
@@ -382,8 +398,11 @@ class Client
             $config = [
                 'base_uri' => (
                 ($this->getOption('mode', self::MODE_LIVE) == self::MODE_LIVE) ?
-                    self::DIRECTORY_LIVE : self::DIRECTORY_STAGING),
+                    (self::DIRECTORY_LIVE) : ((($this->getOption('mode', self::MODE_STAGING) == self::MODE_STAGING)) ? self::DIRECTORY_STAGING : self::DIRECTORY_DEV)),
             ];
+            if ($this->getOption('mode', self::MODE_DEV) == self::MODE_DEV) {
+                $config['verify'] = false;
+            }
             if ($this->getOption('source_ip', false) !== false) {
                 $config['curl.options']['CURLOPT_INTERFACE'] = $this->getOption('source_ip');
             }
@@ -489,7 +508,11 @@ class Client
     protected function init()
     {
         //Load the directories from the LE api
-        $response = $this->getHttpClient()->get('/directory');
+        if (env('APP_ENV') === 'production') {
+            $response = $this->getHttpClient()->get('/directory');
+        } else {
+            $response = $this->getHttpClient()->get('/dir');
+        }
         $result = \GuzzleHttp\json_decode((string)$response->getBody(), true);
         $this->directories = $result;
 
