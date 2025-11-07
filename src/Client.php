@@ -378,13 +378,18 @@ class Client
 
         $data = json_decode((string)$response->getBody(), true);
         $accountURL = $response->getHeaderLine('Location');
+        
+        // Ensure contact field exists, default to empty array if not present
+        $contact = $data['contact'] ?? [];
+        
         if ($this->getOption('mode', self::MODE_DEV) == self::MODE_DEV) {
-            $data['createdAt'] = (new \DateTime());
-            $data['initialIp'] = shell_exec('hostname -I');
-            return new Account($data['contact'], $data['createdAt'], ($data['status'] == 'valid'), $data['initialIp'], $accountURL);
+            $createdAt = $data['createdAt'] ?? (new \DateTime());
+            $initialIp = $data['initialIp'] ?? shell_exec('hostname -I');
+            return new Account($contact, $createdAt, ($data['status'] == 'valid'), $initialIp, $accountURL);
         } else {
-            $date = (new \DateTime())->setTimestamp(strtotime($data['createdAt']));
-            return new Account($data['contact'], $date, ($data['status'] == 'valid'), $data['initialIp'], $accountURL);
+            $createdAt = isset($data['createdAt']) ? (new \DateTime())->setTimestamp(strtotime($data['createdAt'])) : new \DateTime();
+            $initialIp = $data['initialIp'] ?? '';
+            return new Account($contact, $createdAt, ($data['status'] == 'valid'), $initialIp, $accountURL);
         }
     }
 
