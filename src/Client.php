@@ -513,11 +513,7 @@ class Client
     protected function init()
     {
         //Load the directories from the LE api
-        if (env('APP_ENV') === 'production') {
-            $response = $this->getHttpClient()->get('/directory');
-        } else {
-            $response = $this->getHttpClient()->get('/dir');
-        }
+        $response = $this->getHttpClient()->get('/directory');
         $result = \GuzzleHttp\json_decode((string)$response->getBody(), true);
         $this->directories = $result;
 
